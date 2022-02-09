@@ -1,4 +1,6 @@
 const User = require('../models/User')
+const bcrypt = require('bcrypt')
+const createUserToken = require('../helpers/create-user-token')
 
 module.exports = class UserController{
     static async register(req,res){
@@ -44,7 +46,24 @@ module.exports = class UserController{
             return
         }
 
-        
+        //Criar senha
+        //Isso fortifica a senha do usuario, pq além do algoritmo, vou usar uma string com 12 caractere a mais
+        const salt = await bcrypt.genSalt(12)   
+        const passwordHash = await bcrypt.hash(password,salt)  //Isso criptografa a senha
+
+        //Cria um usuário
+        const user = new User({
+            name: name,
+            email:email,
+            phone:phone,
+            password:passwordHash,
+        }) 
+        try {
+            const newUser = await user.save()  //envia o usuário para o banco de dados
+            await createUserToken(newUser, req, res)
+        } catch (error) {
+            res.status(500).json({message:error})
+        }    
         
     }
 }
